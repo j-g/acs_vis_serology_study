@@ -1,0 +1,39 @@
+```{r}
+################################################################################
+# Convert measurement standard deviation to probability of a 2-or-greater fold
+# error in measurement
+################################################################################
+
+# Probability of a measurement below or above the true titre is the probability
+# mass outside of that region. e.g. if the true titer is 1.1, then the prob of
+# not measuring 1 is the prob mass <=1 and >=2. The probability of a measurement
+# error depends on the decimal part of the true titer, not the absolute value.
+# i.e. the prob of getting an error when titer=1.7 is the same for titer=3.7 or
+# titer=6.7. Let x be a number 0<x<1 giving the decimal part of the true titer.
+
+# Assume true titer is uniformly distributed between two dilution values and
+# take the mean value of measurement error probability
+mean_prob_meas_error<-function(sd_error)
+{
+  # Use grid approximation
+  N<-1000
+  x<-seq(0, 1, length=N)
+ 
+  return(mean(pnorm(0, mean=x, sd=sd_error)+pnorm(1, mean=x, sd=sd_error, lower.tail = F))) 
+}
+
+# Load ACS data from 2017-2021 which provides measurement error estimates due to
+# having multiple years of data
+load("../out/acs_yrs_17_21_pats_31_100_5000.RData")
+
+# Extract samples of the measurement error from posterior of sigma
+sigma_sample<-sigma_MCMC$sigma
+sigma_sample<-sigma_sample[sample(1:length(sigma_sample), size=1000)]
+
+# Use these to get a distribution of measurement error probabilities
+meas_error_probs<-sapply(sigma_sample, FUN=mean_prob_meas_error)
+
+# Visualise
+quantile(meas_error_probs, c(.025, .25, .5, .75, .975))
+hist(meas_error_probs)
+```
